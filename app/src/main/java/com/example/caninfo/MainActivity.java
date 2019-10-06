@@ -1,24 +1,27 @@
 package com.example.caninfo;
 
+import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 
 public class MainActivity extends AppCompatActivity {
-
-    private String inf;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,6 +29,17 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+            if (ContextCompat.checkSelfPermission(MainActivity.this,Manifest.permission.WRITE_EXTERNAL_STORAGE) + ContextCompat.checkSelfPermission(MainActivity.this,Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                // Permission is not granted
+                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.INTERNET,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        Manifest.permission.MOUNT_UNMOUNT_FILESYSTEMS,
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.LOCATION_HARDWARE,
+                        Manifest.permission.READ_LOGS,
+                }, 1);
+            }
 
         // The callback can be enabled or disabled here or in handleOnBackPressed()
 
@@ -62,6 +76,32 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode,String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case 1: {
+
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                    // permission was granted, yay! Do the
+                    // contacts-related task you need to do.
+                    Toast.makeText(MainActivity.this, "Permission granted!", Toast.LENGTH_SHORT).show();
+                } else {
+
+                    // permission denied, boo! Disable the
+                    // functionality that depends on this permission.
+                    Toast.makeText(MainActivity.this, "Permission denied", Toast.LENGTH_SHORT).show();
+                }
+                return;
+            }
+
+            // other 'case' lines to check for other
+            // permissions this app might request
+        }
+    }
+
     public void settings_load() {
         SharedPreferences prefs= PreferenceManager.getDefaultSharedPreferences(this);
         if (prefs.getBoolean("rpm",false) == false) {
@@ -84,13 +124,31 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences prefs= PreferenceManager.getDefaultSharedPreferences(this);
         Log.i("info", prefs.getString("canbus","/dev/ttyMT5"));
 
-        UsbManager m = (UsbManager)getApplicationContext().getSystemService(USB_SERVICE);
-        HashMap<String, UsbDevice> devices = m.getDeviceList();
-        Collection<UsbDevice> ite = devices.values();
-        UsbDevice[] usbs = ite.toArray(new UsbDevice[]{});
-        for (UsbDevice usb : usbs){
-            Log.i("info", usb.getDeviceName()); //Log all device names
+        UsbManager usbManager = (UsbManager) getApplicationContext().getSystemService(getApplicationContext().USB_SERVICE);
+        if (usbManager == null) {
+            Log.i("MyApp","USB Not supported");
+            return;
         }
+
+        HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
+        Iterator<UsbDevice> deviceIterator = deviceList.values().iterator();
+
+        String i = "";
+        while (deviceIterator.hasNext()) {
+            UsbDevice device = deviceIterator.next();
+            i += "\n" +
+                    "DeviceID: " + device.getDeviceId() + "\n" +
+                    "DeviceName: " + device.getDeviceName() + "\n" +
+                    "DeviceClass: " + device.getDeviceClass() + "\n" +
+                    "DeviceSubClass: " + device.getDeviceSubclass() + "\n" +
+                    "VendorID: " + device.getVendorId() + "\n" +
+                    "ProductID: " + device.getProductId() + "\n";
+            Log.i("MyApp","Urządzenia" + i);
+        }
+
+        // Normal route
+        Log.i("MyasdadApp","ss"+usbManager.getDeviceList());
+
 
     }
 }
